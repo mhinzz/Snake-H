@@ -184,7 +184,7 @@ startState = State {
     score = 0
 }
 
--- Creat the border of the play area
+-- Creat the border of the play area 
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
@@ -199,12 +199,16 @@ drawBorder state = do
     setCursorPosition 0 (col + length scr + 2)
     putStrLn "000"
 
-    -- TODO high score 
     let scr = " High Score: "
     setCursorPosition 1 (col+2)
     putStrLn scr
+
     setCursorPosition 1 (col + length scr + 2)
     putStrLn "000"
+    
+    highscr <- readFile "Scores.txt"
+    setCursorPosition 1 (col + length scr + 5 - length highscr)
+    putStrLn highscr
 
     setCursorPosition (row+2) 0
 
@@ -219,6 +223,11 @@ drawUpdate (Playing old, Playing new) = do
     putStrLn scoreStr
     setCursorPosition (row+2) 0
 drawUpdate (Playing state, GameOver) = do
+    highscr <- readFile "Scores.txt"
+    let hs = read highscr :: Int
+    if score state >= hs
+    then writeFile "Scores.txt" (show (score state))
+    else return ()
     let text = "Game Over"
         (row, col) = limits state
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
