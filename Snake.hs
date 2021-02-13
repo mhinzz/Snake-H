@@ -206,8 +206,6 @@ drawUpdate (Playing state, GameOver) = do
         (row, col) = limits state
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
-    setCursorPosition 0 (col + length text + 2)
-    putStrLn (show 1)
     setCursorPosition (row+2) 0
 
 -- Set the characters for the snake and food
