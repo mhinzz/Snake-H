@@ -111,7 +111,8 @@ nextState state newDir
             snake = eat (snake state) newDir,
             direction = newDir,
             food = newFood,
-            rand = newRand
+            rand = newRand,
+            score = (score state)+1
         }
         (newFood, newRand) = randFreePosition (limits state) (rand state) $ snake eaten
 
@@ -187,20 +188,36 @@ startState = State {
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
-    let text = "Score: "
-    mapM_ (draw '_') [(0, x)     | x <- [0..col+1]]
+    mapM_ (draw '#') [(0, x)     | x <- [0..col+1]]
     mapM_ (draw '#') [(row+1, x) | x <- [0..col+1]]
     mapM_ (draw '|') [(x, 0)     | x <- [0..row+1]]
     mapM_ (draw '|') [(x, col+1) | x <- [0..row+1]]
+
+    let scr = "Score: "
     setCursorPosition 0 (col+2)
-    putStrLn text
-    setCursorPosition 0 (col + length text + 2)
-    putStrLn (show 0)
+    putStrLn scr
+    setCursorPosition 0 (col + length scr + 2)
+    putStrLn "000"
+
+    -- TODO high score 
+    let scr = "High Score: "
+    setCursorPosition 1 (col+2)
+    putStrLn scr
+    setCursorPosition 1 (col + length scr + 2)
+    putStrLn "000"
+
     setCursorPosition (row+2) 0
 
 -- Take the old and new gamestates and and draw the new output
 drawUpdate :: (GameState, GameState) -> IO ()
-drawUpdate (Playing old, Playing new) = clearState old >> drawState new
+drawUpdate (Playing old, Playing new) = do 
+    clearState old
+    drawState new
+    let (row, col) = limits new
+    let scoreStr = show (score new)
+    setCursorPosition 0 (col + 12 - length scoreStr)
+    putStrLn scoreStr
+    setCursorPosition (row+2) 0
 drawUpdate (Playing state, GameOver) = do
     let text = "Game Over"
         (row, col) = limits state
