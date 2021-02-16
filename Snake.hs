@@ -1,5 +1,5 @@
 module Snake where
-
+-- namespace qualifier -> here it is R
 import qualified System.Random as R
 import System.IO
 import System.Console.ANSI
