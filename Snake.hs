@@ -188,10 +188,10 @@ startState = State {
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
-    mapM_ (draw '#') [(0, x)     | x <- [0..col+1]]
-    mapM_ (draw '#') [(row+1, x) | x <- [0..col+1]]
-    mapM_ (draw '|') [(x, 0)     | x <- [0..row+1]]
-    mapM_ (draw '|') [(x, col+1) | x <- [0..row+1]]
+    mapM_ (draw '\9608') [(0, x)     | x <- [0..col+1]]
+    mapM_ (draw '\9608') [(row+1, x) | x <- [0..col+1]]
+    mapM_ (draw '\9608') [(x, 0)     | x <- [0..row+1]]
+    mapM_ (draw '\9608') [(x, col+1) | x <- [0..row+1]]
 
     let scr = " Score: "
     setCursorPosition 0 (col+2)
@@ -237,7 +237,7 @@ drawUpdate (Playing state, GameOver) = do
     showCursor
 
 -- Set the characters for the snake and food
-drawState  = renderState '@' '*'
+drawState  = renderState '\9608' '\9632'
 -- Set the characters to clear the game area
 clearState = renderState ' ' ' '
 
