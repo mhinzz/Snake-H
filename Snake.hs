@@ -85,7 +85,8 @@ eat snake dir = (move dir $ head snake):snake
 randFreePosition :: R.RandomGen g => (Int, Int) -> g -> Snake -> (Position, g)
 randFreePosition lim g s =
     head $ dropWhile inSnake (randPositions g)
-    where inSnake (x, _) = x `elem` s
+    where
+        inSnake (x, _) = x `elem` s
         randPositions h = r:randPositions g'
             where r@(_, g') = randPosition lim h
 
@@ -230,7 +231,7 @@ drawUpdate (Playing state, GameOver) = do
     else return ()
     let text = "Game Over"
         (row, col) = limits state
-    SetColor Foreground Vivid Red
+    -- SetColor Foreground Vivid Red
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
     setCursorPosition (row+2) 0
