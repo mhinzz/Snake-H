@@ -1,8 +1,9 @@
 module Snake where
-
+-- namespace qualifier -> here it is R
 import qualified System.Random as R
 import System.IO
 import System.Console.ANSI
+import System.Exit (exitSuccess)
 
 import Control.Monad (forever)
 import Control.Concurrent (threadDelay)
@@ -11,10 +12,13 @@ import Pipes
 import Pipes.Concurrent
 import qualified Pipes.Prelude as P
 import Data.Monoid ((<>))
+import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.FilePath.Posix (takeDirectory)
 
 type Position = (Int, Int)
 type Snake = [Position]
 
+-- data Direction = Up | Dn | Rt | Lf | SO deriving (Show, Eq)
 data Direction = Up | Dn | Rt | Lf deriving (Show, Eq)
 
 data Command = Go Direction deriving (Show, Eq)
@@ -28,7 +32,8 @@ data State = State {
     direction :: Direction,
     rand      :: R.StdGen,
     limits    :: (Int, Int),
-    score     :: Int
+    score     :: Int,
+    highScore :: Int
 } deriving (Show)
 
 takeUntilAfter :: Monad m => (a -> Bool) -> Pipe a a m ()
@@ -66,6 +71,7 @@ opposite d = case d of
     Dn -> Up
     Rt -> Lf
     Lf -> Rt
+    -- SO -> SO
 
 -- Take the current directon of position of the head of the snake and return the new position 
 move :: Direction -> Position -> Position
@@ -74,6 +80,7 @@ move d (row, col) = case d of
     Dn -> (row + 1, col)
     Rt -> (row, col + 1)
     Lf -> (row, col - 1)
+    -- SO -> (row, col)
 
 moveSnake s d = (move d $ head s):(init s)
 
@@ -88,7 +95,7 @@ randFreePosition lim g s =
     where
         inSnake (x, _) = x `elem` s
         randPositions h = r:randPositions g'
-              where r@(_, g') = randPosition lim h
+            where r@(_, g') = randPosition lim h
 
 -- return a random position on the board
 randPosition :: R.RandomGen g => (Int, Int) -> g -> (Position, g)
@@ -101,6 +108,7 @@ randPosition (maxr, maxc) g =
 nextState :: State -> Direction -> State
 nextState state newDir
     | newDir == opposite (direction state) = state
+    -- | newDir == SO = startState
     | (move newDir $ head $ snake state) == (food state) = eaten
     | otherwise = movedSnake
     where
@@ -153,6 +161,7 @@ parseCommand c = case c of
     'a' -> Just $ Go Lf
     's' -> Just $ Go Dn
     'd' -> Just $ Go Rt
+    -- 'c' -> Just $ Go SO
     _   -> Nothing
 
 -- Remove the chance of reversing direction
@@ -182,17 +191,18 @@ startState = State {
     direction = Up,
     rand = R.mkStdGen 0,
     limits = (21, 41),
-    score = 0
+    score = 0,
+    highScore = 0
 }
 
 -- Creat the border of the play area 
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
-    mapM_ (draw '#') [(0, x)     | x <- [0..col+1]]
-    mapM_ (draw '#') [(row+1, x) | x <- [0..col+1]]
-    mapM_ (draw '|') [(x, 0)     | x <- [0..row+1]]
-    mapM_ (draw '|') [(x, col+1) | x <- [0..row+1]]
+    mapM_ (draw '\9608') [(0, x)     | x <- [0..col+1]]
+    mapM_ (draw '\9608') [(row+1, x) | x <- [0..col+1]]
+    mapM_ (draw '\9608') [(x, 0)     | x <- [0..row+1]]
+    mapM_ (draw '\9608') [(x, col+1) | x <- [0..row+1]]
 
     let scr = " Score: "
     setCursorPosition 0 (col+2)
@@ -208,6 +218,7 @@ drawBorder state = do
     putStrLn "000"
     
     highscr <- readFile "Scores.txt"
+    let highScore state = read highscr :: Int
     setCursorPosition 1 (col + length scr + 5 - length highscr)
     putStrLn highscr
 
@@ -219,24 +230,38 @@ drawUpdate (Playing old, Playing new) = do
     clearState old
     drawState new
     let (row, col) = limits new
+    if score new >= highScore old
+    then do
+        let
+            highScore new = score new
+            scoreHStr = show (highScore new)
+        setCursorPosition 1 (col + 18 - length scoreHStr)
+        putStrLn scoreHStr
+    else return ()
     let scoreStr = show (score new)
     setCursorPosition 0 (col + 13 - length scoreStr)
     putStrLn scoreStr
     setCursorPosition (row+2) 0
+
 drawUpdate (Playing state, GameOver) = do
-    highscr <- readFile "Scores.txt"
-    let hs = read highscr :: Int
-    if score state >= hs
-    then writeFile "Scores.txt" (show (score state))
+    let (row, col) = limits state
+    if score state >= highScore state
+    then do 
+        let scoreHStr = show (score state)
+        setCursorPosition 1 (col + 18 - length scoreHStr)
+        putStrLn scoreHStr
+        writeFile "Scores.txt" (show (score state))
     else return ()
     let text = "Game Over"
         (row, col) = limits state
+    -- SetColor Foreground Vivid Red
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
     setCursorPosition (row+2) 0
+    showCursor
 
 -- Set the characters for the snake and food
-drawState  = renderState '@' '*'
+drawState  = renderState '\9608' '\9632'
 -- Set the characters to clear the game area
 clearState = renderState ' ' ' '
 
@@ -253,11 +278,24 @@ draw char (row, col) = do
     setCursorPosition row col
     putChar char
 
+-- Create High Score file if it does not exist
+initializeScore :: FilePath -> String -> IO ()
+initializeScore path content = do
+    createDirectoryIfMissing False $ takeDirectory path
+    existornot <- (doesFileExist path)
+    if existornot then
+        return ()
+    else writeFile path content 
+
+-- Main
+main :: IO (Async (), ())
 main = do
+    setTitle "Snake"
+    hideCursor
     startScreen
+    initializeScore "Scores.txt" "0"
     drawBorder startState
     drawState startState
-
     let startDir = direction startState
         run p = async $ runEffect p >> performGC
         from = fromInput
