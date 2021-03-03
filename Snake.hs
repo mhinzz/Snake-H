@@ -85,8 +85,9 @@ eat snake dir = (move dir $ head snake):snake
 randFreePosition :: R.RandomGen g => (Int, Int) -> g -> Snake -> (Position, g)
 randFreePosition lim g s =
     head $ dropWhile inSnake (randPositions g)
-    where inSnake (x, _) = x `elem` s
-          randPositions h = r:randPositions g'
+    where
+        inSnake (x, _) = x `elem` s
+        randPositions h = r:randPositions g'
               where r@(_, g') = randPosition lim h
 
 -- return a random position on the board
