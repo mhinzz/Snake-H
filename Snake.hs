@@ -18,6 +18,7 @@ import System.FilePath.Posix (takeDirectory)
 type Position = (Int, Int)
 type Snake = [Position]
 
+-- data Direction = Up | Dn | Rt | Lf | SO deriving (Show, Eq)
 data Direction = Up | Dn | Rt | Lf deriving (Show, Eq)
 
 data Command = Go Direction deriving (Show, Eq)
@@ -70,6 +71,7 @@ opposite d = case d of
     Dn -> Up
     Rt -> Lf
     Lf -> Rt
+    -- SO -> SO
 
 -- Take the current directon of position of the head of the snake and return the new position 
 move :: Direction -> Position -> Position
@@ -78,6 +80,7 @@ move d (row, col) = case d of
     Dn -> (row + 1, col)
     Rt -> (row, col + 1)
     Lf -> (row, col - 1)
+    -- SO -> (row, col)
 
 moveSnake s d = (move d $ head s):(init s)
 
@@ -105,6 +108,7 @@ randPosition (maxr, maxc) g =
 nextState :: State -> Direction -> State
 nextState state newDir
     | newDir == opposite (direction state) = state
+    -- | newDir == SO = startState
     | (move newDir $ head $ snake state) == (food state) = eaten
     | otherwise = movedSnake
     where
@@ -157,6 +161,7 @@ parseCommand c = case c of
     'a' -> Just $ Go Lf
     's' -> Just $ Go Dn
     'd' -> Just $ Go Rt
+    -- 'c' -> Just $ Go SO
     _   -> Nothing
 
 -- Remove the chance of reversing direction
@@ -220,7 +225,7 @@ drawBorder state = do
     setCursorPosition (row+2) 0
 
 -- Take the old and new gamestates and and draw the new output
--- drawUpdate :: (GameState, GameState) -> IO ()
+drawUpdate :: (GameState, GameState) -> IO ()
 drawUpdate (Playing old, Playing new) = do 
     clearState old
     drawState new
@@ -276,11 +281,11 @@ draw char (row, col) = do
 -- Create High Score file if it does not exist
 initializeScore :: FilePath -> String -> IO ()
 initializeScore path content = do
-  createDirectoryIfMissing False $ takeDirectory path
-  existornot <- (doesFileExist path)
-  if existornot then
-    return ()
-  else writeFile path content 
+    createDirectoryIfMissing False $ takeDirectory path
+    existornot <- (doesFileExist path)
+    if existornot then
+        return ()
+    else writeFile path content 
 
 -- Main
 main :: IO (Async (), ())
