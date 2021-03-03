@@ -3,7 +3,6 @@ module Snake where
 import qualified System.Random as R
 import System.IO
 import System.Console.ANSI
-import System.Exit (exitSuccess)
 
 import Control.Monad (forever)
 import Control.Concurrent (threadDelay)
