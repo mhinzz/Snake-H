@@ -11,7 +11,7 @@ import Pipes
 import Pipes.Concurrent
 import qualified Pipes.Prelude as P
 import Data.Monoid ((<>))
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath.Posix (takeDirectory)
 
 type Position = (Int, Int)
@@ -262,8 +262,11 @@ draw char (row, col) = do
 -- Initialize the score system
 initializeScore :: FilePath -> String -> IO ()
 initializeScore path content = do
-  createDirectoryIfMissing True $ takeDirectory path
-  writeFile path content 
+  createDirectoryIfMissing False $ takeDirectory path
+  existornot <- (doesFileExist path)
+  if existornot then
+    return ()
+  else writeFile path content 
 
 -- Main
 main :: IO (Async (), ())
