@@ -3,6 +3,7 @@ module Snake where
 import qualified System.Random as R
 import System.IO
 import System.Console.ANSI
+import System.Exit (exitSuccess)
 
 import Control.Monad (forever)
 import Control.Concurrent (threadDelay)
@@ -30,7 +31,8 @@ data State = State {
     direction :: Direction,
     rand      :: R.StdGen,
     limits    :: (Int, Int),
-    score     :: Int
+    score     :: Int,
+    highScore :: Int
 } deriving (Show)
 
 takeUntilAfter :: Monad m => (a -> Bool) -> Pipe a a m ()
@@ -184,7 +186,8 @@ startState = State {
     direction = Up,
     rand = R.mkStdGen 0,
     limits = (21, 41),
-    score = 0
+    score = 0,
+    highScore = 0
 }
 
 -- Creat the border of the play area 
@@ -210,6 +213,7 @@ drawBorder state = do
     putStrLn "000"
     
     highscr <- readFile "Scores.txt"
+    let highScore state = read highscr :: Int
     setCursorPosition 1 (col + length scr + 5 - length highscr)
     putStrLn highscr
 
@@ -221,6 +225,14 @@ drawUpdate (Playing old, Playing new) = do
     clearState old
     drawState new
     let (row, col) = limits new
+    if score new >= highScore old
+    then do
+        let
+            highScore new = score new
+            scoreHStr = show (highScore new)
+        setCursorPosition 1 (col + 18 - length scoreHStr)
+        putStrLn scoreHStr
+    else return ()
     let scoreStr = show (score new)
     setCursorPosition 0 (col + 13 - length scoreStr)
     putStrLn scoreStr
@@ -228,9 +240,7 @@ drawUpdate (Playing old, Playing new) = do
 
 drawUpdate (Playing state, GameOver) = do
     let (row, col) = limits state
-    highscr <- readFile "Scores.txt"
-    let hs = read highscr :: Int
-    if score state >= hs
+    if score state >= highScore state
     then do 
         let scoreHStr = show (score state)
         setCursorPosition 1 (col + 18 - length scoreHStr)
@@ -263,7 +273,7 @@ draw char (row, col) = do
     setCursorPosition row col
     putChar char
 
--- Initialize the score system
+-- Create High Score file if it does not exist
 initializeScore :: FilePath -> String -> IO ()
 initializeScore path content = do
   createDirectoryIfMissing False $ takeDirectory path
