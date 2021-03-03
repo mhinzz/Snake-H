@@ -1,5 +1,5 @@
 module Snake where
-
+-- namespace qualifier -> here it is R
 import qualified System.Random as R
 import System.IO
 import System.Console.ANSI
@@ -11,6 +11,8 @@ import Pipes
 import Pipes.Concurrent
 import qualified Pipes.Prelude as P
 import Data.Monoid ((<>))
+import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.FilePath.Posix (takeDirectory)
 
 type Position = (Int, Int)
 type Snake = [Position]
@@ -214,7 +216,7 @@ drawBorder state = do
     setCursorPosition (row+2) 0
 
 -- Take the old and new gamestates and and draw the new output
-drawUpdate :: (GameState, GameState) -> IO ()
+-- drawUpdate :: (GameState, GameState) -> IO ()
 drawUpdate (Playing old, Playing new) = do 
     clearState old
     drawState new
@@ -223,11 +225,17 @@ drawUpdate (Playing old, Playing new) = do
     setCursorPosition 0 (col + 13 - length scoreStr)
     putStrLn scoreStr
     setCursorPosition (row+2) 0
+
 drawUpdate (Playing state, GameOver) = do
+    let (row, col) = limits state
     highscr <- readFile "Scores.txt"
     let hs = read highscr :: Int
     if score state >= hs
-    then writeFile "Scores.txt" (show (score state))
+    then do 
+        let scoreHStr = show (score state)
+        setCursorPosition 1 (col + 18 - length scoreHStr)
+        putStrLn scoreHStr
+        writeFile "Scores.txt" (show (score state))
     else return ()
     let text = "Game Over"
         (row, col) = limits state
@@ -255,13 +263,24 @@ draw char (row, col) = do
     setCursorPosition row col
     putChar char
 
+-- Initialize the score system
+initializeScore :: FilePath -> String -> IO ()
+initializeScore path content = do
+  createDirectoryIfMissing False $ takeDirectory path
+  existornot <- (doesFileExist path)
+  if existornot then
+    return ()
+  else writeFile path content 
+
+-- Main
+main :: IO (Async (), ())
 main = do
     setTitle "Snake"
     hideCursor
     startScreen
+    initializeScore "Scores.txt" "0"
     drawBorder startState
     drawState startState
-
     let startDir = direction startState
         run p = async $ runEffect p >> performGC
         from = fromInput
