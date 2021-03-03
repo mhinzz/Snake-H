@@ -11,6 +11,8 @@ import Pipes
 import Pipes.Concurrent
 import qualified Pipes.Prelude as P
 import Data.Monoid ((<>))
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath.Posix (takeDirectory)
 
 type Position = (Int, Int)
 type Snake = [Position]
@@ -188,10 +190,10 @@ startState = State {
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
-    mapM_ (draw '#') [(0, x)     | x <- [0..col+1]]
-    mapM_ (draw '#') [(row+1, x) | x <- [0..col+1]]
-    mapM_ (draw '|') [(x, 0)     | x <- [0..row+1]]
-    mapM_ (draw '|') [(x, col+1) | x <- [0..row+1]]
+    mapM_ (draw '\9746') [(0, x)     | x <- [0..col+1]]
+    mapM_ (draw '\9746') [(row+1, x) | x <- [0..col+1]]
+    mapM_ (draw '\9746') [(x, 0)     | x <- [0..row+1]]
+    mapM_ (draw '\9746') [(x, col+1) | x <- [0..row+1]]
 
     let scr = " Score: "
     setCursorPosition 0 (col+2)
@@ -213,7 +215,7 @@ drawBorder state = do
     setCursorPosition (row+2) 0
 
 -- Take the old and new gamestates and and draw the new output
-drawUpdate :: (GameState, GameState) -> IO ()
+-- drawUpdate :: (GameState, GameState) -> IO ()
 drawUpdate (Playing old, Playing new) = do 
     clearState old
     drawState new
@@ -222,20 +224,25 @@ drawUpdate (Playing old, Playing new) = do
     setCursorPosition 0 (col + 13 - length scoreStr)
     putStrLn scoreStr
     setCursorPosition (row+2) 0
+
 drawUpdate (Playing state, GameOver) = do
+    let (row, col) = limits state
     highscr <- readFile "Scores.txt"
     let hs = read highscr :: Int
     if score state >= hs
-    then writeFile "Scores.txt" (show (score state))
+    then do 
+        let scoreHStr = show (score state)
+        setCursorPosition 1 (col + 18 - length scoreHStr)
+        putStrLn scoreHStr
+        writeFile "Scores.txt" (show (score state))
     else return ()
     let text = "Game Over"
-        (row, col) = limits state
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
     setCursorPosition (row+2) 0
 
 -- Set the characters for the snake and food
-drawState  = renderState '@' '*'
+drawState  = renderState '\9608' '*'
 -- Set the characters to clear the game area
 clearState = renderState ' ' ' '
 
@@ -252,11 +259,19 @@ draw char (row, col) = do
     setCursorPosition row col
     putChar char
 
+-- Initialize the score system
+initializeScore :: FilePath -> String -> IO ()
+initializeScore path content = do
+  createDirectoryIfMissing True $ takeDirectory path
+  writeFile path content 
+
+-- Main
+main :: IO (Async (), ())
 main = do
     startScreen
+    initializeScore "Scores.txt" "0"
     drawBorder startState
     drawState startState
-
     let startDir = direction startState
         run p = async $ runEffect p >> performGC
         from = fromInput
