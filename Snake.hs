@@ -131,7 +131,7 @@ nextState state newDir
 toGameState :: State -> GameState
 toGameState state
     | collision $ snake state = GameOver
-    | collision $ aisnake state = GameOver
+--  | collision $ aisnake state = GameOver
     | any (outside $ limits state) (snake state) = GameOver
     | otherwise = Playing state
     where
@@ -258,11 +258,11 @@ drawUpdate (Playing state, GameOver) = do
     -- SetColor Foreground Vivid Red
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
-    putStrLn "To play again, press 'r'. To quit, press 'q'."
-        line <- getLine
-    if (line `elem` ["r","R"]) then
-        do main {-restart game-}
-    else QUIT GAME
+--    putStrLn "To play again, press 'r'. To quit, press 'q'."
+--        line <- getLine
+--    if (line `elem` ["r","R"]) then
+--        do main {-restart game-}
+--    else QUIT GAME
     setCursorPosition (row+2) 0
     showCursor
 
@@ -319,10 +319,11 @@ main = do
         waitAny [inputTask, drawingTask]
     
     
+-- to start the game, load Snake.hs and type 'go'
 go :: IO (Async (), ())
-go = do
-     putStrLn "Welcome to Snake!  Control the snake's direction with your keyboard: 'w' for up, 'a' for left, 's' for down, 'd' for right.  Gain points by directing the snake to food items (squares) on the board.  The game ends when your snake runs into itself, the other snake, or the edge of the board.  To start the game, press 'a':"
+go =
+  do
+    putStrLn("\n\nWelcome to Snake! \n\n-- Control the snake's direction with your keyboard: \n 'w' for up \n 'a' for left \n 's' for down \n 'd' for right  \n-- Gain points by directing the snake to food items (squares) that appear on the board. \n-- The game ends when your snake runs into itself, the other snake, or the edge of the board.  \n\nTo start the game, press any key.")
     line <- getLine
-    if (line `elem` ["a","A"]) then
-        do main
-   
+    main
+
