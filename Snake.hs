@@ -296,27 +296,27 @@ initializeScore path content = do
 -- Main
 main :: IO (Async (), ())
 main = do
-            setTitle "Snake"
-            hideCursor
-            startScreen
-            initializeScore "Scores.txt" "0"
-            drawBorder startState
-            drawState startState
-            let startDir = direction startState
-                run p = async $ runEffect p >> performGC
-                from = fromInput
-                to = toOutput
+        setTitle "Snake"
+        hideCursor
+        startScreen
+        initializeScore "Scores.txt" "0"
+        drawBorder startState
+        drawState startState
+        let startDir = direction startState
+            run p = async $ runEffect p >> performGC
+            from = fromInput
+            to = toOutput
 
-            (mO, mI) <- spawn unbounded
-            (dO, dI) <- spawn $ latest startDir
+        (mO, mI) <- spawn unbounded
+        (dO, dI) <- spawn $ latest startDir
 
-            inputTask <- run $ getDirections >-> to (mO <> dO)
-            delayedTask <- run $ from dI >-> rateLimit 1 >-> to mO
-            drawingTask <- run $ for
-                (from mI >-> transitions startState)
-                (lift . drawUpdate)
+        inputTask <- run $ getDirections >-> to (mO <> dO)
+        delayedTask <- run $ from dI >-> rateLimit 1 >-> to mO
+        drawingTask <- run $ for
+            (from mI >-> transitions startState)
+            (lift . drawUpdate)
 
-            waitAny [inputTask, drawingTask]
+        waitAny [inputTask, drawingTask]
     
     
 go :: IO (Async (), ())
