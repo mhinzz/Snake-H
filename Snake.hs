@@ -57,7 +57,7 @@ transitions game =
         isGameOver GameOver = True
         isGameOver (Playing _) = False
 
--- Sets the rate of the game taking an int as a multiplyer which is default 1
+-- Sets the rate of the game taking an int as a multiplier which is default 1
 rateLimit :: Int -> Pipe b b IO ()
 rateLimit t = forever $ do
     lift $ threadDelay (t * 250000)
@@ -103,7 +103,7 @@ randPosition (maxr, maxc) g =
         (col, g2) = R.randomR (1, maxc) g1
     in ((row, col), g2)
 
--- Take the state and direction of the snake and determin the next state
+-- Take the state and direction of the snake and determine the next state
 nextState :: State -> Direction -> State
 nextState state newDir
     | newDir == opposite (direction state) = state
@@ -124,12 +124,14 @@ nextState state newDir
         }
         (newFood, newRand) = randFreePosition (limits state) (rand state) $ snake eaten
 
--- determin if the game given the current state should be over 
+-- determine if the game given the current state should be over 
     -- if the head of the snake is in the body of the snake
     -- if the head of the snake is outside the play area
+    -- if the head of the snake is in the body of the AI snake
 toGameState :: State -> GameState
 toGameState state
     | collision $ snake state = GameOver
+    | collision $ aisnake state = GameOver
     | any (outside $ limits state) (snake state) = GameOver
     | otherwise = Playing state
     where
@@ -256,6 +258,11 @@ drawUpdate (Playing state, GameOver) = do
     -- SetColor Foreground Vivid Red
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
+    putStrLn "To play again, press 'r'. To quit, press 'q'."
+        line <- getLine
+    if (line `elem` ["r","R"]) then
+        do main {-restart game-}
+    else QUIT GAME
     setCursorPosition (row+2) 0
     showCursor
 
@@ -289,24 +296,33 @@ initializeScore path content = do
 -- Main
 main :: IO (Async (), ())
 main = do
-    setTitle "Snake"
-    hideCursor
-    startScreen
-    initializeScore "Scores.txt" "0"
-    drawBorder startState
-    drawState startState
-    let startDir = direction startState
-        run p = async $ runEffect p >> performGC
-        from = fromInput
-        to = toOutput
+            setTitle "Snake"
+            hideCursor
+            startScreen
+            initializeScore "Scores.txt" "0"
+            drawBorder startState
+            drawState startState
+            let startDir = direction startState
+                run p = async $ runEffect p >> performGC
+                from = fromInput
+                to = toOutput
 
-    (mO, mI) <- spawn unbounded
-    (dO, dI) <- spawn $ latest startDir
+            (mO, mI) <- spawn unbounded
+            (dO, dI) <- spawn $ latest startDir
 
-    inputTask <- run $ getDirections >-> to (mO <> dO)
-    delayedTask <- run $ from dI >-> rateLimit 1 >-> to mO
-    drawingTask <- run $ for
-        (from mI >-> transitions startState)
-        (lift . drawUpdate)
+            inputTask <- run $ getDirections >-> to (mO <> dO)
+            delayedTask <- run $ from dI >-> rateLimit 1 >-> to mO
+            drawingTask <- run $ for
+                (from mI >-> transitions startState)
+                (lift . drawUpdate)
 
-    waitAny [inputTask, drawingTask]
+            waitAny [inputTask, drawingTask]
+    
+    
+go :: IO (Async (), ())
+go = do
+     putStrLn "Welcome to Snake!  Control the snake's direction with your keyboard: 'w' for up, 'a' for left, 's' for down, 'd' for right.  Gain points by directing the snake to food items (squares) on the board.  The game ends when your snake runs into itself, the other snake, or the edge of the board.  To start the game, press 'a':"
+    line <- getLine
+    if (line `elem` ["a","A"]) then
+        do main
+   
