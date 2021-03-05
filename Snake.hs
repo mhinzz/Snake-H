@@ -192,7 +192,7 @@ startState = State {
     score = 0
 }
 
--- Creat the border of the play area 
+-- Create the border of the play area 
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
@@ -248,8 +248,12 @@ drawUpdate (Playing state, GameOver) = do
         writeFile "Scores.txt" scoreHStr
     else return ()
     let text = "Game Over"
-    setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
+    setCursorPosition ((row `div` 2) + 0) (((col - length text) `div` 2) + 1)
+    putStrLn text
     let text = "Press any key then Enter to start over."
+    setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
+    putStrLn text
+    let text = "Or press Ctrl + C to close."
     setCursorPosition ((row `div` 2) + 2) (((col - length text) `div` 2) + 1)
     putStrLn text
     setCursorPosition (row+2) 0
@@ -311,16 +315,14 @@ main = do
 go :: IO ()
 go =
     do
+        startScreen
+        setCursorPosition 0 0
         putStrLn("\n\nWelcome to Snake! \n\n-- Control the snake's direction with your keyboard: \n 'w' for up \n 'a' for left \n 's' for down \n 'd' for right  \n-- Gain points by directing the snake to food items (squares) that appear on the board. \n-- The game ends when your snake runs into itself, the other snake, or the edge of the board.  \n\nTo start the game, press Enter.")
         goHelp
 
 goHelp :: IO ()
 goHelp = do 
     line <- getLine
-    if (elem line ["q"])
-    then do
-        putStrLn("something")
-        return ()
-    else do
-        main
-        goHelp
+    
+    main
+    goHelp
