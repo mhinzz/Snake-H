@@ -248,9 +248,9 @@ drawUpdate (Playing state, GameOver) = do
         writeFile "Scores.txt" scoreHStr
     else return ()
     let text = "Game Over"
-        (row, col) = limits state
-    -- SetColor Foreground Vivid Red
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
+    let text = "Press any key then Enter to start over."
+    setCursorPosition ((row `div` 2) + 2) (((col - length text) `div` 2) + 1)
     putStrLn text
     setCursorPosition (row+2) 0
     showCursor
