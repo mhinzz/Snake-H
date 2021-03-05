@@ -31,8 +31,7 @@ data State = State {
     direction :: Direction,
     rand      :: R.StdGen,
     limits    :: (Int, Int),
-    score     :: Int,
-    highScore :: Int
+    score     :: Int
 } deriving (Show)
 
 takeUntilAfter :: Monad m => (a -> Bool) -> Pipe a a m ()
@@ -190,8 +189,7 @@ startState = State {
     direction = Up,
     rand = R.mkStdGen 0,
     limits = (21, 41),
-    score = 0,
-    highScore = 0
+    score = 0
 }
 
 -- Creat the border of the play area 
@@ -203,22 +201,17 @@ drawBorder state = do
     mapM_ (draw '\9608') [(x, 0)     | x <- [0..row+1]]
     mapM_ (draw '\9608') [(x, col+1) | x <- [0..row+1]]
 
-    let scr = " Score: "
+    let scr = " Score: 000"
     setCursorPosition 0 (col+2)
     putStrLn scr
-    setCursorPosition 0 (col + length scr + 2)
-    putStrLn "000"
 
-    let scr = " High Score: "
+    let hscr = " High Score: 000"
     setCursorPosition 1 (col+2)
-    putStrLn scr
-
-    setCursorPosition 1 (col + length scr + 2)
-    putStrLn "000"
+    putStrLn hscr
     
     highscr <- readFile "Scores.txt"
-    let highScore state = read highscr :: Int
-    setCursorPosition 1 (col + length scr + 5 - length highscr)
+    let highScore = read highscr :: Int
+    setCursorPosition 1 (col+2 + (length hscr) - (length highscr))
     putStrLn highscr
 
     setCursorPosition (row+2) 0
@@ -228,14 +221,15 @@ drawUpdate :: (GameState, GameState) -> IO ()
 drawUpdate (Playing old, Playing new) = do 
     clearState old
     drawState new
-    let (row, col) = limits new
-    if score new >= highScore old
-    then do
-        let
-            highScore new = score new
-            scoreHStr = show (highScore new)
+    highscr <- readFile "Scores.txt"
+    let 
+        highScore = read highscr :: Int
+        (row, col) = limits new
+    if score old >= highScore then do
+        let scoreHStr = show (score new)
         setCursorPosition 1 (col + 18 - length scoreHStr)
         putStrLn scoreHStr
+        writeFile "Scores.txt" scoreHStr
     else return ()
     let scoreStr = show (score new)
     setCursorPosition 0 (col + 13 - length scoreStr)
@@ -243,13 +237,15 @@ drawUpdate (Playing old, Playing new) = do
     setCursorPosition (row+2) 0
 
 drawUpdate (Playing state, GameOver) = do
-    let (row, col) = limits state
-    if score state >= highScore state
-    then do 
+    highscr <- readFile "Scores.txt"
+    let 
+        highScore = read highscr :: Int
+        (row, col) = limits state
+    if score state >= highScore then do 
         let scoreHStr = show (score state)
         setCursorPosition 1 (col + 18 - length scoreHStr)
         putStrLn scoreHStr
-        writeFile "Scores.txt" (show (score state))
+        writeFile "Scores.txt" scoreHStr
     else return ()
     let text = "Game Over"
         (row, col) = limits state
