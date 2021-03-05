@@ -135,11 +135,12 @@ nextState state newDir
 toGameState :: State -> GameState
 toGameState state
     | collision $ snake state = GameOver
-    | collision $ aisnake state = GameOver
+    | aicollision (snake state) (aisnake state) = GameOver
     | any (outside $ limits state) (snake state) = GameOver
     | otherwise = Playing state
     where
-        collision (x:xs) = any (== x) (tail xs)
+        collision (x:xs) = any (== x) (tail xs) {-if the snake head and any part of the tail match in x-}
+        aicollision (x:xs) lst2 = elem x lst2 {-is the head of your snake an element in the ai snake's state?-}
         outside (maxr, maxc) (row, col) =
             row < 1 || row > maxr || col < 1 || col > maxc
 
