@@ -84,7 +84,7 @@ move d (row, col) = case d of
 
 moveSnake s d = (move d $ head s):(init s)
 
---moveAISnake s d = (move d $ head s):(init s)
+moveAISnake s d = (move d $ head s):(init s)
 
 -- Add the position of the food to the length of the snake 
 eat :: Snake -> Direction -> Snake
@@ -116,7 +116,7 @@ nextState state newDir
     where
         movedSnake = state { 
             snake = moveSnake (snake state) newDir,
---            aisnake = moveAISnake (aisnake state) Lf,
+            aisnake = moveAISnake (aisnake state) Rt,
             direction = newDir
         }
         eaten = state {
@@ -144,7 +144,7 @@ toGameState state
         outside (maxr, maxc) (row, col) =
             row < 1 || row > maxr || col < 1 || col > maxc
 
--- Determine the next direction for the snake (your snake)
+-- Determine the next direction for the snake
 getDirections :: Producer Direction IO ()
 getDirections =
     getCommands
@@ -193,10 +193,10 @@ startScreen = do
 -- Initialize the state to start the game
 startState = State { 
     snake = [(x, 21) | x <- [15..19]],
-    aisnake = [(11, y) | y <- [1..5]],
+    aisnake = [(11, y) | y <- [1..7]],
     food = (11, 21),
     direction = Up,
-    aidirection = Lf,
+    aidirection = Rt,
     rand = R.mkStdGen 0,
     limits = (21, 41),
     score = 0
