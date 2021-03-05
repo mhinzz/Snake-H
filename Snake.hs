@@ -84,7 +84,7 @@ move d (row, col) = case d of
 
 moveSnake s d = (move d $ head s):(init s)
 
-moveAISnake s d = (move d $ head s):(init s)
+--moveAISnake s d = (move d $ head s):(init s)
 
 -- Add the position of the food to the length of the snake 
 eat :: Snake -> Direction -> Snake
@@ -116,7 +116,7 @@ nextState state newDir
     where
         movedSnake = state { 
             snake = moveSnake (snake state) newDir,
-            aisnake = moveAISnake (aisnake state) aidirection,
+--            aisnake = moveAISnake (aisnake state) Lf,
             direction = newDir
         }
         eaten = state {
