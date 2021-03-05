@@ -27,12 +27,13 @@ data GameState = Playing State | GameOver deriving (Show)
 -- Define the state object
 data State = State {
     snake     :: Snake,
+    aisnake   :: Snake,
     food      :: Position,
     direction :: Direction,
+    aidirection :: Direction,
     rand      :: R.StdGen,
     limits    :: (Int, Int),
-    score     :: Int,
-    highScore :: Int
+    score     :: Int
 } deriving (Show)
 
 takeUntilAfter :: Monad m => (a -> Bool) -> Pipe a a m ()
@@ -72,7 +73,7 @@ opposite d = case d of
     Lf -> Rt
     -- SO -> SO
 
--- Take the current directon of position of the head of the snake and return the new position 
+-- Take the current direction of position of the head of the snake and return the new position 
 move :: Direction -> Position -> Position
 move d (row, col) = case d of
     Up -> (row - 1, col)
@@ -82,6 +83,8 @@ move d (row, col) = case d of
     -- SO -> (row, col)
 
 moveSnake s d = (move d $ head s):(init s)
+
+moveAISnake s d = (move d $ head s):(init s)
 
 -- Add the position of the food to the length of the snake 
 eat :: Snake -> Direction -> Snake
@@ -103,7 +106,7 @@ randPosition (maxr, maxc) g =
         (col, g2) = R.randomR (1, maxc) g1
     in ((row, col), g2)
 
--- Take the state and direction of the snake and determine the next state
+-- Take the state and direction of the snake and the aisnake and determine the next state
 nextState :: State -> Direction -> State
 nextState state newDir
     | newDir == opposite (direction state) = state
@@ -113,6 +116,7 @@ nextState state newDir
     where
         movedSnake = state { 
             snake = moveSnake (snake state) newDir,
+            aisnake = moveAISnake (aisnake state) aidirection,
             direction = newDir
         }
         eaten = state {
@@ -126,12 +130,12 @@ nextState state newDir
 
 -- determine if the game given the current state should be over 
     -- if the head of the snake is in the body of the snake
+    -- if the head of the snake is in the body of the ai snake
     -- if the head of the snake is outside the play area
-    -- if the head of the snake is in the body of the AI snake
 toGameState :: State -> GameState
 toGameState state
     | collision $ snake state = GameOver
---  | collision $ aisnake state = GameOver
+    | collision $ aisnake state = GameOver
     | any (outside $ limits state) (snake state) = GameOver
     | otherwise = Playing state
     where
@@ -139,7 +143,7 @@ toGameState state
         outside (maxr, maxc) (row, col) =
             row < 1 || row > maxr || col < 1 || col > maxc
 
--- Determine the next direction for the snake
+-- Determine the next direction for the snake (your snake)
 getDirections :: Producer Direction IO ()
 getDirections =
     getCommands
@@ -188,15 +192,16 @@ startScreen = do
 -- Initialize the state to start the game
 startState = State { 
     snake = [(x, 21) | x <- [15..19]],
+    aisnake = [(11, y) | y <- [1..5]],
     food = (11, 21),
     direction = Up,
+    aidirection = Lf,
     rand = R.mkStdGen 0,
     limits = (21, 41),
-    score = 0,
-    highScore = 0
+    score = 0
 }
 
--- Creat the border of the play area 
+-- Create the border of the play area 
 drawBorder :: State -> IO ()
 drawBorder state = do
     let (row, col) = limits state
@@ -205,22 +210,17 @@ drawBorder state = do
     mapM_ (draw '\9608') [(x, 0)     | x <- [0..row+1]]
     mapM_ (draw '\9608') [(x, col+1) | x <- [0..row+1]]
 
-    let scr = " Score: "
+    let scr = " Score: 000"
     setCursorPosition 0 (col+2)
     putStrLn scr
-    setCursorPosition 0 (col + length scr + 2)
-    putStrLn "000"
 
-    let scr = " High Score: "
+    let hscr = " High Score: 000"
     setCursorPosition 1 (col+2)
-    putStrLn scr
-
-    setCursorPosition 1 (col + length scr + 2)
-    putStrLn "000"
+    putStrLn hscr
     
     highscr <- readFile "Scores.txt"
-    let highScore state = read highscr :: Int
-    setCursorPosition 1 (col + length scr + 5 - length highscr)
+    let highScore = read highscr :: Int
+    setCursorPosition 1 (col+2 + (length hscr) - (length highscr))
     putStrLn highscr
 
     setCursorPosition (row+2) 0
@@ -230,14 +230,15 @@ drawUpdate :: (GameState, GameState) -> IO ()
 drawUpdate (Playing old, Playing new) = do 
     clearState old
     drawState new
-    let (row, col) = limits new
-    if score new >= highScore old
-    then do
-        let
-            highScore new = score new
-            scoreHStr = show (highScore new)
+    highscr <- readFile "Scores.txt"
+    let 
+        highScore = read highscr :: Int
+        (row, col) = limits new
+    if score old >= highScore then do
+        let scoreHStr = show (score new)
         setCursorPosition 1 (col + 18 - length scoreHStr)
         putStrLn scoreHStr
+        writeFile "Scores.txt" scoreHStr
     else return ()
     let scoreStr = show (score new)
     setCursorPosition 0 (col + 13 - length scoreStr)
@@ -245,37 +246,39 @@ drawUpdate (Playing old, Playing new) = do
     setCursorPosition (row+2) 0
 
 drawUpdate (Playing state, GameOver) = do
-    let (row, col) = limits state
-    if score state >= highScore state
-    then do 
+    highscr <- readFile "Scores.txt"
+    let 
+        highScore = read highscr :: Int
+        (row, col) = limits state
+    if score state >= highScore then do 
         let scoreHStr = show (score state)
         setCursorPosition 1 (col + 18 - length scoreHStr)
         putStrLn scoreHStr
-        writeFile "Scores.txt" (show (score state))
+        writeFile "Scores.txt" scoreHStr
     else return ()
     let text = "Game Over"
-        (row, col) = limits state
-    -- SetColor Foreground Vivid Red
     setCursorPosition ((row `div` 2) + 1) (((col - length text) `div` 2) + 1)
     putStrLn text
---    putStrLn "To play again, press 'r'. To quit, press 'q'."
---        line <- getLine
---    if (line `elem` ["r","R"]) then
---        do main {-restart game-}
---    else QUIT GAME
+    let text = "To play again, press any key then Enter."
+    setCursorPosition ((row `div` 2) + 2) (((col - length text) `div` 2) + 1)
+    putStrLn text
+    let text = "To quit, press Ctrl+C then any key."
+    setCursorPosition ((row `div` 2) + 3) (((col - length text) `div` 2) + 1)
+    putStrLn text
     setCursorPosition (row+2) 0
     showCursor
 
--- Set the characters for the snake and food
-drawState  = renderState '\9608' '\9632'
+-- Set the characters for the snake, aisnake and food
+drawState  = renderState '\9608' '\36' '\9632' 
 -- Set the characters to clear the game area
-clearState = renderState ' ' ' '
+clearState = renderState ' ' ' ' ' '
 
 -- draw the state given either the draw characters or the cleared characters
-renderState :: Char -> Char -> State -> IO ()
-renderState snk fud state = do
+renderState :: Char -> Char -> Char -> State -> IO ()
+renderState snk aisnk fud state = do
     draw fud (food state)
     mapM_ (draw snk) (reverse $ snake state)
+    mapM_ (draw aisnk) (reverse $ aisnake state)
     cursorBackward 1
 
 -- Put the given character at the given position
@@ -296,34 +299,42 @@ initializeScore path content = do
 -- Main
 main :: IO (Async (), ())
 main = do
-        setTitle "Snake"
-        hideCursor
-        startScreen
-        initializeScore "Scores.txt" "0"
-        drawBorder startState
-        drawState startState
-        let startDir = direction startState
-            run p = async $ runEffect p >> performGC
-            from = fromInput
-            to = toOutput
+    setTitle "Snake"
+    hideCursor
+    startScreen
+    initializeScore "Scores.txt" "0"
+    drawBorder startState
+    drawState startState
+    let startDir = direction startState
+        run p = async $ runEffect p >> performGC
+        from = fromInput
+        to = toOutput
 
-        (mO, mI) <- spawn unbounded
-        (dO, dI) <- spawn $ latest startDir
+    (mO, mI) <- spawn unbounded
+    (dO, dI) <- spawn $ latest startDir
 
-        inputTask <- run $ getDirections >-> to (mO <> dO)
-        delayedTask <- run $ from dI >-> rateLimit 1 >-> to mO
-        drawingTask <- run $ for
-            (from mI >-> transitions startState)
-            (lift . drawUpdate)
+    inputTask <- run $ getDirections >-> to (mO <> dO)
+    delayedTask <- run $ from dI >-> rateLimit 1 >-> to mO
+    drawingTask <- run $ for
+        (from mI >-> transitions startState)
+        (lift . drawUpdate)
 
-        waitAny [inputTask, drawingTask]
-    
-    
+    waitAny [inputTask, drawingTask]
+
 -- to start the game, load Snake.hs and type 'go'
-go :: IO (Async (), ())
+go :: IO ()
 go =
-  do
-    putStrLn("\n\nWelcome to Snake! \n\n-- Control the snake's direction with your keyboard: \n 'w' for up \n 'a' for left \n 's' for down \n 'd' for right  \n-- Gain points by directing the snake to food items (squares) that appear on the board. \n-- The game ends when your snake runs into itself, the other snake, or the edge of the board.  \n\nTo start the game, press any key.")
-    line <- getLine
-    main
+    do
+        putStrLn("\n\nWelcome to Snake! \n\n-- Control the snake's direction with your keyboard: \n 'w' for up \n 'a' for left \n 's' for down \n 'd' for right  \n-- Gain points by directing the snake to food items (squares) that appear on the board. \n-- The game ends when your snake runs into itself, the other snake, or the edge of the board.  \n\nTo start the game, press Enter.  To quit Snake now, press 'q' then Enter.")
+        goHelp
 
+goHelp :: IO ()
+goHelp = do 
+    line <- getLine
+    if (elem line ["q"])
+    then do
+        putStrLn("Quitting Snake...")
+        return ()
+    else do
+        main
+        goHelp
