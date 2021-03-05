@@ -306,3 +306,21 @@ main = do
         (lift . drawUpdate)
 
     waitAny [inputTask, drawingTask]
+
+-- to start the game, load Snake.hs and type 'go'
+go :: IO ()
+go =
+    do
+        putStrLn("\n\nWelcome to Snake! \n\n-- Control the snake's direction with your keyboard: \n 'w' for up \n 'a' for left \n 's' for down \n 'd' for right  \n-- Gain points by directing the snake to food items (squares) that appear on the board. \n-- The game ends when your snake runs into itself, the other snake, or the edge of the board.  \n\nTo start the game, press Enter.")
+        goHelp
+
+goHelp :: IO ()
+goHelp = do 
+    line <- getLine
+    if (elem line ["q"])
+    then do
+        putStrLn("something")
+        return ()
+    else do
+        main
+        goHelp
