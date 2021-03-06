@@ -84,8 +84,23 @@ move d (row, col) = case d of
 
 moveSnake s d = (move d $ head s):(init s)
 
-moveAISnake s d = (move d $ head s):(init s)
-
+--decide which way the AI snake will move
+moveAISnake s d lims {-lims = limits state variable-}
+    | any (outside $ lims) s = (move (switchAIdir d) $ head s):(init s) {-if any part of the ai snake is outside the limits, go left-}
+    | otherwise = (move d $ head s):(init s)  {-keep moving in direction d-}
+    where
+        outside (maxr, maxc) (row, col) =
+            row < 2 || row > maxr - 1 || col < 2 || col > maxc - 1
+            
+-- Change AI snake direction according to pattern
+switchAIdir :: Direction -> Direction
+switchAIdir d = case d of
+    Up -> Lf
+    Dn -> Rt
+    Rt -> Up
+    Lf -> Dn
+    -- SO -> SO
+            
 -- Add the position of the food to the length of the snake 
 eat :: Snake -> Direction -> Snake
 eat snake dir = (move dir $ head snake):snake
@@ -116,7 +131,7 @@ nextState state newDir
     where
         movedSnake = state { 
             snake = moveSnake (snake state) newDir,
-            aisnake = moveAISnake (aisnake state) Rt,
+            aisnake = moveAISnake (aisnake state) (switchAIdir newDir) (limits state),
             direction = newDir
         }
         eaten = state {
