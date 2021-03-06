@@ -86,7 +86,7 @@ moveSnake s d = (move d $ head s):(init s)
 
 --decide which way the AI snake will move
 moveAISnake s d lims {-lims = limits state variable-}
-    | any (outside $ lims) s = (move (switchAIdir d) $ head s):(init s) {-if any part of the ai snake is outside the limits, go left-}
+    | any (outside $ lims) s = (move (switchAIdir d) $ head s):(init s) {-if any part of the ai snake is outside the limits, change direction-}
     | otherwise = (move d $ head s):(init s)  {-keep moving in direction d-}
     where
         outside (maxr, maxc) (row, col) =
